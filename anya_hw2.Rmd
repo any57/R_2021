@@ -1,0 +1,94 @@
+---
+title: "HW2"
+author: "Anya Kuznetsova"
+date: "9/23/2021"
+output: html_document
+---
+
+<style type="text/css">
+  body{
+  font-size: 12pt;
+}
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(tibble)
+library(dplyr)
+library(ggplot2)
+library(ggrepel)
+library(stringi)
+```
+## Task 1
+
+Based on this [data](https://raw.githubusercontent.com/dashapopova/Intro-to-R/main/HWs/HW2/UK_pubs.csv) we plot the 40 most frequent names of pubs in the UK: the x-axis is for the number of symbols in the pub name, the y-axis is for the number of bars with the same name.
+
+```{r, fig.width=8.5,fig.height=6}
+pubs <- read.csv("https://raw.githubusercontent.com/dashapopova/Intro-to-R/main/HWs/HW2/UK_pubs.csv")
+
+pubs_top40 = pubs %>%
+     group_by(pub_name) %>%
+     summarise(pubs_amount = n()) %>%
+     arrange(desc(pubs_amount)) %>%
+     slice(1:40) %>%
+     mutate(name_length = nchar(pub_name))
+
+ggplot(data = pubs_top40, aes(name_length, pubs_amount, label = pub_name)) +
+     geom_point()+
+     geom_text_repel(size=4.5, max.overlaps = 14)+
+     theme_bw()+
+     labs(x = "number of symbols",
+       y = "number of bars",
+       title = "40 most popular bar names in UK",
+       caption = "data from http://pudding.cool/2019/10/pubs/")
+```
+
+You can compare it to the original picture:
+![](https://raw.githubusercontent.com/dashapopova/Intro-to-R/main/HWs/HW2/pubs.png)
+
+And additionally here is the same plot for 50 most popular bar names:
+
+```{r, fig.width=8.5,fig.height=6}
+pubs_top50 = pubs %>%
+     group_by(pub_name) %>%
+     summarise(pubs_amount = n()) %>%
+     arrange(desc(pubs_amount)) %>%
+     slice(1:50) %>%
+     mutate(name_length = nchar(pub_name))
+
+ggplot(data = pubs_top50, aes(name_length, pubs_amount, label = pub_name)) +
+     geom_point()+
+     geom_text_repel(size=4.5, max.overlaps = 18)+
+     theme_bw()+
+     labs(x = "number of symbols",
+       y = "number of bars",
+       title = "50 most popular bar names in UK",
+       caption = "data from http://pudding.cool/2019/10/pubs/")
+```
+
+## Task 2
+
+
+```{r, fig.width=5.5,fig.height=7.5}
+
+questions <- read.csv("https://raw.githubusercontent.com/dashapopova/Intro-to-R/main/HWs/HW2/mad_questionary.csv")
+
+age_sex = tibble(age = questions[, 2]) %>%
+        mutate(sex = str_to_lower(questions[, 3], locale = "ru")) %>%
+        mutate(sex = str_replace_all(sex, "^м(?!ужской)", "мужской")) %>%
+        mutate(sex = str_replace_all(sex, "^ж(?!енский)", "женский")) %>%
+        mutate(sex = str_trunc(sex, 7, ellipsis = "")) %>%
+        mutate(age = as.integer(str_trunc(age, 2, ellipsis = "")))
+
+ggplot(data = age_sex, aes(age, fill = sex)) +
+        geom_dotplot(method = "histodot") +
+        scale_y_continuous(NULL, breaks = NULL)
+```
+
+You can compare it to the original picture:
+
+![](https://raw.githubusercontent.com/dashapopova/Intro-to-R/main/HWs/HW2/questionnaire.png)

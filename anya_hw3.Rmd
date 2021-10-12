@@ -1,0 +1,123 @@
+---
+title: "HW3"
+author: "Anya Kuznetsova"
+date: "9/26/2021"
+output: html_document
+---
+
+<style type="text/css">
+  body{
+  font-size: 12pt;
+}
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(tibble)
+library(ggrepel)
+library(stringi)
+```
+## Task 1
+
+Based on this [data](https://raw.githubusercontent.com/agricolamz/DS_for_DH/master/data/freq_dict_2011.csv) we compute how many times each character has occurred in the dictionary:
+
+```{r, fig.width=8.5,fig.height=6}
+dictionary <- read.csv("https://raw.githubusercontent.com/agricolamz/DS_for_DH/master/data/freq_dict_2011.csv")
+
+cyrillic <- c('а', 'б', 'в', 'г', 'д', 'е', 'ж', 'з', 'и', 'й', 'к', 'л', 'м', 'н', 'о', 'п', 'р', 'с', 'т', 'у', 'ф', 'х', 'ц', 'ч', 'ш', 'щ', 'ъ', 'ы', 'ь', 'э', 'ю', 'я')
+
+characters <- lapply(cyrillic, function(x) x<-sum(x==tolower(unlist(str_split(dictionary$lemma, "")))))
+
+plot_data = tibble(cyrillic_character = cyrillic, n_character = as.integer(lapply(characters, "[", 1)))
+
+plot_data %>% 
+  ggplot(aes(fct_reorder(cyrillic_character, n_character), n_character, label = n_character))+
+  geom_col() +
+  coord_flip() +
+  theme_bw() +
+    labs(x = "",
+         y = "",
+         caption = "данные из [Ляшевская, Шаров 2011]")
+```
+
+We can see it is the same as the picture:
+![](https://raw.githubusercontent.com/dashapopova/Intro-to-R/main/HWs/HW3/dictionary.png)
+
+And just for fun here is exactly the same plot -- the only difference is this one counts the character "ё" as well ( there isn't a single "ё" in the entire dictionary anyway but in my humble opinion it shouldn't be ignored :( ))
+
+```{r, fig.width=8.5,fig.height=6}
+cyrillic <- c(cyrillic, 'ё')
+
+characters <- lapply(cyrillic, function(x) x<-sum(x==tolower(unlist(str_split(dictionary$lemma, "")))))
+
+plot_data = tibble(cyrillic_character = cyrillic, n_character = as.integer(lapply(characters, "[", 1)))
+
+plot_data %>% 
+  ggplot(aes(fct_reorder(cyrillic_character, n_character), n_character, label = n_character))+
+  geom_col() +
+  coord_flip() +
+  theme_bw() +
+    labs(x = "",
+         y = "",
+         caption = "данные из [Ляшевская, Шаров 2011]")
+```
+
+## Task 2
+
+Based on this [data](https://raw.githubusercontent.com/agricolamz/DS_for_DH/master/data/us_city_average_temperature.csv) which include names of 51 US cities, their population, the minimum and the maximum monthly temperature for each city in Fahrenheit, we turn Fahrenheit into Celsius and find the minimum temperature in the dataset (across all the cities and all the months):
+
+```{r}
+cities <- read.csv("https://raw.githubusercontent.com/agricolamz/DS_for_DH/master/data/us_city_average_temperature.csv")
+
+C_cities <- as.data.frame(lapply(cities[3:26], function(x) x<-5/9*(x-32)))
+
+C_data = tibble(cities[1], C_cities[1:24])
+
+min(C_data[,2:25])
+```
+
+Unfortunately I wasn't able to obtain the column and row name automatically -- but it was reached in January in Minneapolis, Minnesota.
+
+And now we plot the range of minimum and maximum temperature in all cities for each month separately:
+
+```{r, fig.width=8.5,fig.height=6}
+C_cities <- as.data.frame(lapply(cities[3:26], function(x) x<-round(5/9*(x-32), 1)))
+
+C_mln_cities <- as.data.frame(lapply(cities[2], function(x) x<-round(x / 1e6, 1)))
+
+new_plot_data = tibble(cities[1], C_mln_cities[1], C_cities[1:24])
+
+new_plot_data$city <- factor(new_plot_data$city)
+data_long <- gather(new_plot_data, month, temperature, min_january:max_december, factor_key=TRUE)
+
+char_temperature <- as.data.frame(lapply(data_long[3], as.character))
+
+#data_long = melt(setDT(new_plot_data), id=1:2, measure=patterns("^min", "^max"), 
+ #    value.name=c("min_month", "max_month"), variable.name="loop_number")
+
+data_table = tibble(data_long[1:2], data_long[4]) %>%
+  mutate(range = char_temperature[1]) %>%
+  mutate(month = char_temperature[1]) %>%
+  mutate(range = str_trunc(range$month, 3, ellipsis = "")) %>%
+  mutate(month = str_remove(month$month, "min_|max_"))
+
+data_table$month <- factor(data_table$month,  levels = c("january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"))
+
+data_table %>% 
+  ggplot(aes(population_2010, temperature, colour = range))+
+  geom_point(size = 2)+
+  facet_wrap(~month)+
+  theme_bw()+
+  labs(x = "population (mln persons)",
+       y = "temperature",
+       caption = "data from www.currentresults.com")
+```
+
+We can see it is the same as the original picture:
+![](https://raw.githubusercontent.com/dashapopova/Intro-to-R/main/HWs/HW3/temperature.png)

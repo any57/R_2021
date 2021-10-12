@@ -1,0 +1,141 @@
+---
+title: "HW1"
+author: "Anya Kuznetsova"
+date: "10/2/2021"
+output: html_document
+---
+
+<style type="text/css">
+  body{
+  font-size: 12pt;
+}
+</style>
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(tibble)
+library(dplyr)
+library(ggplot2)
+library(ggrepel)
+library(ggridges)
+library(ggbeeswarm)
+```
+
+## Visualization in R
+
+The following plots are based on the data from this [file](https://raw.githubusercontent.com/dashapopova/Intro-to-R/main/HWs/heroes_information.csv).
+
+```{r}
+heroes <- read.csv("https://raw.githubusercontent.com/dashapopova/Intro-to-R/main/HWs/heroes_information.csv")
+```
+
+First of all we will exclude incorrectly specified data -- at least in cases where it is obvious:
+
+```{r}
+heroes <- heroes[heroes[, 7] != "-99", ]
+heroes <- heroes[heroes[, 11] != "-99", ]
+```
+
+Now let's only count the two biggest publishers there are -- Marvel and DC -- since the others are insignificant comparing to these two:
+
+```{r}
+publishers_top2 = heroes[apply(heroes,1,function(x) {any(c("Marvel Comics", "DC Comics") %in% x)}),]
+```
+
+In our first plot we will take a look at the gender dependence of the height of human characters (for clarity). For simplicity, we will consider only those characters whose gender is indicated:
+
+```{r}
+h_publishers_top2 = publishers_top2[apply(publishers_top2,1,function(x) {any(c("Human") %in% x)}),]
+
+fm_publishers_top2 = h_publishers_top2[apply(h_publishers_top2,1,function(x) {any(c("Female", "Male") %in% x)}),]
+```
+
+Here is our first plot:
+
+```{r}
+fm_publishers_top2 %>% 
+  ggplot(aes(Gender, Height))+
+  geom_violin(width = 0.3)+
+  labs(x = "Gender of the hero",
+  y = "Height of the hero",
+  title = "Dependence of the human heroes height on their gender")
+```
+
+For our next plot let's consider not only human heroes but mutants too but now we will exclude 6 certain characters because their weight (the key parameter this time) is too big and will ruin our plot:
+
+```{r}
+hm_publishers_top2 = publishers_top2[apply(publishers_top2,1,function(x) {any(c("Mutant", "Human") %in% x)}),]
+
+h_m_publishers_top2 <- hm_publishers_top2[!(hm_publishers_top2$name=="Juggernaut" | hm_publishers_top2$name=="Bloodaxe" | hm_publishers_top2$name=="A-Bomb" | hm_publishers_top2$name=="Onslaught" | hm_publishers_top2$name=="She-Hulk" | hm_publishers_top2$name=="Scorpion"),]
+```
+
+Here is our second plot:
+
+```{r, fig.width=10,fig.height=6}
+h_m_publishers_top2 %>% 
+  ggplot(aes(Weight, Race, fill = Race)) +
+  geom_rug()+
+  geom_density_ridges(alpha = 0.57)+
+  theme_bw()+
+  labs(x = "Weight of hero",
+       title = "Dependence of the heroes weight on their race (human and mutant)")
+```
+
+Now we will consider dependence of heroes height on their race.
+
+Again we have to exclude singled out heroes of a very big height for them no too ruin the plot:
+
+```{r}
+noGiants_publishers_top2 <- publishers_top2[!(publishers_top2$Race=="-" | publishers_top2$name=="Fin Fang Foom" | publishers_top2$name=="Galactus" | publishers_top2$name=="Groot"),]
+```
+
+Here is a histogram of all races:
+
+```{r, fig.width=10,fig.height=6}
+noGiants_publishers_top2 %>% 
+  ggplot(aes(Height, fill = Race)) +
+  geom_rug()+
+  geom_histogram() +
+  theme_bw()+
+  labs(x = "Height of hero",
+       title = "Dependence of the heroes height on their race")
+```
+
+Now let's concentrate on humans and mutants again (because these two races have the biggest number of heroes):
+
+```{r, fig.width=5.5,fig.height=8}
+hm_noGiants_publishers_top2 = noGiants_publishers_top2[apply(noGiants_publishers_top2,1,function(x) {any(c("Mutant", "Human") %in% x)}),]
+
+ggplot(data = hm_noGiants_publishers_top2, aes(Height, fill = Race)) +
+  geom_dotplot(method = "histodot") +
+  scale_y_continuous(NULL, breaks = NULL) +
+  theme_bw()+
+  labs(x = "Height of hero",
+       title = "Dependence of the heroes height on their race (human and mutant)")
+```
+
+And in our final plot we will study dependence of the heroes size on their skin color -- just for fun, i guess.
+
+Once again we are removing all "giants" and all heroes whose skin color isn't specified:
+
+```{r}
+normal_publishers_top2 <-  publishers_top2[!(publishers_top2$name=="Fin Fang Foom" | publishers_top2$name=="Galactus" | publishers_top2$name=="Groot" | publishers_top2$name=="Juggernaut" | publishers_top2$name=="Bloodaxe" | publishers_top2$name=="A-Bomb" | publishers_top2$name=="Onslaught" | publishers_top2$name=="She-Hulk" | publishers_top2$name=="Scorpion" | publishers_top2$Skin.color=="-"),]
+```
+
+Colors of dots represent color of heroes skin. Although this plot is not very representative because in this dataset the skin color is indicated only for a small number of heroes.
+
+```{r, fig.width=10,fig.height=7}
+normal_publishers_top2 %>%
+  ggplot(aes(Height, Weight, color = Skin.color))+
+  geom_point() + 
+  labs(x = "Height of the hero",
+       y = "Weight of the Hero",
+       title = "Dependence of the heroes size on their skin color") +
+  theme(legend.position = "bottom") +
+  scale_color_manual(values = c("blue", "#ADD8E6", "gold", "green", "#231F20", "orange", "pink", "purple", "red", "#C0C0C0", "white", "yellow"))
+
+```
